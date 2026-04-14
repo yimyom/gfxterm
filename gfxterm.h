@@ -201,6 +201,20 @@ class TerminalGraphics
         void get_block_size();
 };
 
+/// @brief An empty implementation to do a terminal capabilities detection only
+class DetectGraphics : public TerminalGraphics
+{
+    public:
+        using TerminalGraphics::TerminalGraphics;
+
+        uint32_t send_image(const std::vector<uint8_t>& png, uint32_t id=0) { return 0; }
+        bool display_at_cursor(uint32_t id, int indent=0) { return true; }
+        bool display_at_position(uint32_t id, int row, int col) { return true; }
+        bool display_again(uint32_t id) { return true; } 
+        void delete_image(uint32_t id) { }
+
+};
+
 /// @brief Kitty terminal graphics protocol implementation
 class KittyGraphics : public TerminalGraphics
 {
