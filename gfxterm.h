@@ -1,20 +1,23 @@
 /*
  *  gfxterm: a library to display images on the terminal with kitty, sixel, iterm2 protocols and tmux
  *  Copyright (C) 2026 David Bellot <david.bellot@gmail.com>
-
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
-
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
-
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+
+/// @file gfxterm.h
+/// @brief Main header for the gfxterm terminal graphics library
 
 #pragma once
 
@@ -33,14 +36,20 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 
+/// @brief Generate a unique image identifier
 uint32_t generate_unique_id();
+/// @brief Get the name of a control character (ASCII 0-31)
 constexpr std::string_view control_name(unsigned char c);
+/// @brief Convert binary data to printable bracket notation
 std::string to_bracket_notation(std::string_view input);
+/// @brief Load a binary file into memory
 std::vector<uint8_t> load_binary_file(const std::string& filename);
 
 namespace base64
 {
+/// @brief Split base64 string into chunks for transmission
 std::vector<std::string_view> chunk(const std::string& encoded, size_t chunk_size = 4096);
+/// @brief Encode binary data to base64 string
 std::string encode(void const* src, size_t size);
 } // namespace base64
 
@@ -69,16 +78,17 @@ struct StdinGuard
     StdinGuard& operator=(const StdinGuard&) = delete;
 };
 
+/// @brief Represents an image in the terminal
 struct Image
 {
-    uint32_t id = 0;            /// image id
+    uint32_t id = 0;            ///< Unique identifier for this image
 
-    uint32_t width=0, height=0; /// image dimension in pixels
-    uint32_t cols = 0, rows=0;  /// image dimension in characters
+    uint32_t width=0, height=0; ///< Image dimensions in pixels
+    uint32_t cols = 0, rows=0;  ///< Image dimensions in terminal cells
 
-    int col=0, row=0;           /// Coordinates at display time
+    int col=0, row=0;           ///< Display position in terminal
 };
-using Images = std::map<uint32_t, Image>;
+using Images = std::map<uint32_t, Image>;  ///< Map of image ID to Image data
 
 // Custom formatter for Image
 template <> struct std::formatter<Image> : std::formatter<std::string>
@@ -109,6 +119,7 @@ template <> struct std::formatter<Image> : std::formatter<std::string>
     }
 };
 
+/// @brief Base class for terminal graphics protocols
 class TerminalGraphics
 {
     public:
@@ -116,32 +127,53 @@ class TerminalGraphics
         TerminalGraphics();
 
         // Terminal capabilities
+        /// @brief Check if terminal supports Sixel graphics
         bool has_sixel();
+        /// @brief Check if terminal supports iTerm2 graphics protocol
         bool has_iterm2();
+        /// @brief Check if terminal supports Kitty graphics protocol
         bool has_kitty();
+        /// @brief Check if running inside tmux
         bool is_in_tmux();
+        /// @brief Get terminal width in characters
         uint32_t cols();
+        /// @brief Get terminal height in characters
 		uint32_t rows();
+        /// @brief Get terminal width in pixels
         uint32_t width();
+        /// @brief Get terminal height in pixels
 		uint32_t height();
+        /// @brief Get character cell width in pixels
         uint32_t block_width();
+        /// @brief Get character cell height in pixels
 		uint32_t block_height();
 
         // Basic terminal functions
+        /// @brief Get current terminal dimensions
         std::optional<winsize> terminal_size();
+        /// @brief Query current cursor position (row, col)
         std::optional<std::tuple<int,int>> cursor_position();
+        /// @brief Move cursor to specified position
         void move_cursor(int row, int col);
 
         // Query
+        /// @brief Wrap command for tmux compatibility
         std::string tmux_wrap(const std::string& query);
+        /// @brief Send terminal query and read response
         std::optional<std::string> query(const std::string& q, const std::string& st = "\033\\");
 
         // Image managment
+        /// @brief Send PNG image to terminal, returns assigned image ID
         virtual uint32_t send_image(const std::vector<uint8_t>& png, uint32_t id=0) = 0;
+        /// @brief Display image at current cursor position
         virtual bool display_at_cursor(uint32_t id, int indent) = 0;
+        /// @brief Display image at specific terminal position
         virtual bool display_at_position(uint32_t id, int row, int col) = 0;
+        /// @brief Redisplay previously shown image
         virtual bool display_again(uint32_t id) = 0;
+        /// @brief Delete image from terminal memory
         virtual void delete_image(uint32_t id) = 0;
+        /// @brief Get all loaded images
         Images& images();
 
     protected:
@@ -169,6 +201,7 @@ class TerminalGraphics
         void get_block_size();
 };
 
+/// @brief Kitty terminal graphics protocol implementation
 class KittyGraphics : public TerminalGraphics
 {
     public:
@@ -187,6 +220,7 @@ class KittyGraphics : public TerminalGraphics
         std::string unicode_placeholders(uint32_t id, int indent, int rows, int cols);
 };
 
+/// @brief Sixel graphics protocol implementation
 class SixelGraphics : public TerminalGraphics
 {
     public:
@@ -271,11 +305,10 @@ class SixelGraphics : public TerminalGraphics
             const uint32_t n = static_cast<uint32_t>(colors.size());
             return {static_cast<uint8_t>(r / n), static_cast<uint8_t>(g / n), static_cast<uint8_t>(b / n)};
         }
+    };
 };
 
-
-};
-
+/// @brief iTerm2 graphics protocol implementation
 class ITermGraphics : public TerminalGraphics
 {
     public:
